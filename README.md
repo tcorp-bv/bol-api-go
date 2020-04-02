@@ -5,13 +5,16 @@ We do not hold copyright over the API specification and [types.json](types.json)
 
 ## Using the API
 ```go
+import (
+    bolapi "github.com/tcorp-bv/bol-api-go"
+)
 // Setup the authentication
-bolApi, err := api.New(&auth.EnvironmentProvider{ClientIdKey: "CLIENT_ID", ClientSecretKey: "CLIENT_SECRET"})
+api, err := bolapi.New(&auth.EnvironmentProvider{ClientIdKey: "CLIENT_ID", ClientSecretKey: "CLIENT_SECRET"})
 if err != nil {
 	//handle error
 }
 // Get the client (you should do this once)
-client := bolApi.GetClient()
+client := api.GetClient()
 	
 // Use the API
 res, err := client.Shipments.GetShipments(&shipments.GetShipmentsParams{Context:context.Background()})
