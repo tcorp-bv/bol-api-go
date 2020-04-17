@@ -51,6 +51,9 @@ type CustomerDetails struct {
 	// The order reference specified by the customer when ordering a product.
 	OrderReference string `json:"orderReference,omitempty"`
 
+	// The name of Pick Up Point location this order needs to be shipped to.
+	PickUpPointName string `json:"pickUpPointName,omitempty"`
+
 	// The salutation of the customer (01 = MALE, 02 = FEMALE, 03 = UNKNOWN)
 	SalutationCode string `json:"salutationCode,omitempty"`
 

@@ -7,6 +7,7 @@ package models
 
 import (
 	"encoding/json"
+	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -23,6 +24,9 @@ type Fulfilment struct {
 	// Enum: [24uurs-23 24uurs-22 24uurs-21 24uurs-20 24uurs-19 24uurs-18 24uurs-17 24uurs-16 24uurs-15 24uurs-14 24uurs-13 24uurs-12 1-2d 2-3d 3-5d 4-8d 1-8d MijnLeverbelofte]
 	DeliveryCode string `json:"deliveryCode,omitempty"`
 
+	// List of Pick Up Points codes enabled for this offer.
+	PickUpPoints []*PickUpPoint `json:"pickUpPoints"`
+
 	// Specifies whether this shipment has been fulfilled by the retailer (FBR) or fulfilled by bol.com (FBB). Defaults to FBR.
 	// Enum: [FBB FBR]
 	Type string `json:"type,omitempty"`
@@ -33,6 +37,10 @@ func (m *Fulfilment) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateDeliveryCode(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validatePickUpPoints(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -132,6 +140,31 @@ func (m *Fulfilment) validateDeliveryCode(formats strfmt.Registry) error {
 	// value enum
 	if err := m.validateDeliveryCodeEnum("deliveryCode", "body", m.DeliveryCode); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (m *Fulfilment) validatePickUpPoints(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.PickUpPoints) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.PickUpPoints); i++ {
+		if swag.IsZero(m.PickUpPoints[i]) { // not required
+			continue
+		}
+
+		if m.PickUpPoints[i] != nil {
+			if err := m.PickUpPoints[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("pickUpPoints" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
 	}
 
 	return nil
