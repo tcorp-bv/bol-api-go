@@ -4,6 +4,8 @@ Generated golang API for [bol.com v3](https://api.bol.com/retailer/public/redoc/
 We do not hold copyright over the API specification and [types.json](types.json) is from [bol.com](https://api.bol.com/retailer/public/apispec/v3).
 
 ## Using the API
+Add `github.com/tcorp-bv/bol-api-go v1.0.0` to go.mod.
+
 ```go
 import (
     bolapi "github.com/tcorp-bv/bol-api-go"
