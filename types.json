@@ -1086,6 +1086,52 @@
       }
     },
     "/retailer/process-status" : {
+      "get" : {
+        "tags" : [ "Process Status" ],
+        "summary" : "Gets the status of an asynchronous process by entity id and event type for a retailer",
+        "description" : "Retrieve a list of process statuses, which shows information regarding previously executed PUT/POST/DELETE requests in descending order. You need to supply an entity id and event type.",
+        "operationId" : "get-process-status-list",
+        "produces" : [ "application/vnd.retailer.v3+json", "application/vnd.retailer.v3+xml" ],
+        "parameters" : [ {
+          "name" : "entity-id",
+          "in" : "query",
+          "description" : "The entity id is not unique so you need to provide an event type. The entity id can either be order item id, transport id, return number or inbound reference.",
+          "required" : true,
+          "type" : "string",
+          "x-example" : "987654321"
+        }, {
+          "name" : "event-type",
+          "in" : "query",
+          "description" : "The event type can only be used in combination with the entity id.",
+          "required" : true,
+          "type" : "string",
+          "x-example" : "PROCESS_EXAMPLE",
+          "enum" : [ "CONFIRM_SHIPMENT", "CANCEL_ORDER", "CHANGE_TRANSPORT", "HANDLE_RETURN_ITEM", "CREATE_RETURN_ITEM", "CREATE_INBOUND", "DELETE_OFFER", "CREATE_OFFER", "UPDATE_OFFER", "UPDATE_OFFER_STOCK", "UPDATE_OFFER_PRICE", "CREATE_OFFER_EXPORT", "UNPUBLISHED_OFFER_REPORT", "CREATE_PRODUCT_CONTENT" ]
+        }, {
+          "name" : "page",
+          "in" : "query",
+          "description" : "The requested page number with a pagesize of 50",
+          "required" : false,
+          "type" : "integer",
+          "default" : 1,
+          "minimum" : 1,
+          "format" : "int32"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Ok: Successfully processed the request.",
+            "schema" : {
+              "$ref" : "#/definitions/ProcessStatusResponse"
+            }
+          },
+          "400" : {
+            "description" : "Bad request: The sent request does not meet the API specification. Please check the error message(s) for more information.",
+            "schema" : {
+              "$ref" : "#/definitions/Problem"
+            }
+          }
+        }
+      },
       "post" : {
         "tags" : [ "Process Status" ],
         "summary" : "Gets the status of multiple asynchronous processes by an array of process status id's for a retailer",
@@ -1219,7 +1265,7 @@
         "parameters" : [ {
           "name" : "page",
           "in" : "query",
-          "description" : "The requested page number with a pagesize of 50",
+          "description" : "The requested page number with a pagesize of 50. The requested page number with a pagesize of 50 returns (within one return there can be multiple rma id's).",
           "required" : false,
           "type" : "integer",
           "default" : 1,
@@ -1499,6 +1545,11 @@
     "AddressDetails" : {
       "type" : "object",
       "properties" : {
+        "pickUpPointName" : {
+          "type" : "string",
+          "example" : "Albert Heijn: UTRECHT",
+          "description" : "The name of Pick Up Point location this order needs to be shipped to."
+        },
         "salutationCode" : {
           "type" : "string",
           "example" : "02",
@@ -1837,6 +1888,11 @@
     "CustomerDetails" : {
       "type" : "object",
       "properties" : {
+        "pickUpPointName" : {
+          "type" : "string",
+          "example" : "Albert Heijn: UTRECHT",
+          "description" : "The name of Pick Up Point location this order needs to be shipped to."
+        },
         "salutationCode" : {
           "type" : "string",
           "example" : "02",
@@ -1966,6 +2022,13 @@
           "type" : "string",
           "description" : "The delivery promise that applies to this offer.",
           "enum" : [ "24uurs-23", "24uurs-22", "24uurs-21", "24uurs-20", "24uurs-19", "24uurs-18", "24uurs-17", "24uurs-16", "24uurs-15", "24uurs-14", "24uurs-13", "24uurs-12", "1-2d", "2-3d", "3-5d", "4-8d", "1-8d", "MijnLeverbelofte" ]
+        },
+        "pickUpPoints" : {
+          "type" : "array",
+          "description" : "List of Pick Up Points codes enabled for this offer.",
+          "items" : {
+            "$ref" : "#/definitions/PickUpPoint"
+          }
         }
       }
     },
@@ -2226,6 +2289,11 @@
           "example" : "A2K8290LP8",
           "description" : "The order id."
         },
+        "pickUpPoint" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Indicates whether this order is shipped to a Pick Up Point."
+        },
         "dateTimeOrderPlaced" : {
           "type" : "string",
           "format" : "date-time",
@@ -2386,6 +2454,16 @@
           "type" : "string",
           "example" : "2019",
           "description" : "Year number in the ISO-8601 standard."
+        }
+      }
+    },
+    "PickUpPoint" : {
+      "type" : "object",
+      "properties" : {
+        "code" : {
+          "type" : "string",
+          "description" : "The code of the pickup point location in case you want to ship items to pickup points.",
+          "enum" : [ "PUP_AH_NL" ]
         }
       }
     },
@@ -3077,6 +3155,11 @@
           "example" : 541757635,
           "description" : "A unique identifier for this shipment."
         },
+        "pickUpPoint" : {
+          "type" : "boolean",
+          "example" : true,
+          "description" : "Indicates whether this order is shipped to a Pick Up Point."
+        },
         "shipmentDate" : {
           "type" : "string",
           "format" : "date-time",
@@ -3176,7 +3259,9 @@
         "shipmentReference" : {
           "type" : "string",
           "example" : "B321SR",
-          "description" : "Used for administration purposes."
+          "description" : "Used for administration purposes.",
+          "minLength" : 0,
+          "maxLength" : 90
         },
         "shippingLabelCode" : {
           "type" : "string",

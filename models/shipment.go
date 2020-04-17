@@ -25,6 +25,9 @@ type Shipment struct {
 	// customer details
 	CustomerDetails *CustomerDetails `json:"customerDetails,omitempty"`
 
+	// Indicates whether this order is shipped to a Pick Up Point.
+	PickUpPoint bool `json:"pickUpPoint,omitempty"`
+
 	// The date and time in ISO 8601 format when the order item was shipped.
 	// Format: date-time
 	ShipmentDate strfmt.DateTime `json:"shipmentDate,omitempty"`

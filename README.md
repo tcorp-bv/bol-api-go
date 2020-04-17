@@ -33,8 +33,14 @@ for _, s := range res.Payload.Shipments {
 swagger generate client -f types.json
 ```
 
+In the current version we had to change `get-process-status` to `get-process-status-list` due to the duplicate.
+
 ## Todo
 * Rate-limit management
 
 ## Security notes
 As this project uses go-swagger, it has external dependencies. In production you should audit go.sum to make sure that these are not malicious.
+
+## Notes on rate limiting
+Rate limits of the bol.com api are shared between all your clientIds and are extremely low.
+Because of this, we recommend having a single service that consumes your bol.com api and indexes all resources.

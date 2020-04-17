@@ -33,6 +33,9 @@ type Order struct {
 	// order items
 	// Required: true
 	OrderItems []*OrderItem `json:"orderItems"`
+
+	// Indicates whether this order is shipped to a Pick Up Point.
+	PickUpPoint bool `json:"pickUpPoint,omitempty"`
 }
 
 // Validate validates this order

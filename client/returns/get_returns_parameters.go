@@ -100,7 +100,7 @@ type GetReturnsParams struct {
 	*/
 	Handled *bool
 	/*Page
-	  The requested page number with a pagesize of 50
+	  The requested page number with a pagesize of 50. The requested page number with a pagesize of 50 returns (within one return there can be multiple rma id's).
 
 	*/
 	Page *int32

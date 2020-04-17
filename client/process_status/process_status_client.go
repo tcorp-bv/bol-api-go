@@ -31,6 +31,8 @@ type ClientService interface {
 
 	GetProcessStatusBulk(params *GetProcessStatusBulkParams) (*GetProcessStatusBulkOK, error)
 
+	GetProcessStatusList(params *GetProcessStatusListParams) (*GetProcessStatusListOK, error)
+
 	SetTransport(transport runtime.ClientTransport)
 }
 
@@ -103,6 +105,42 @@ func (a *Client) GetProcessStatusBulk(params *GetProcessStatusBulkParams) (*GetP
 	// unexpected success response
 	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for get-process-status-bulk: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+  GetProcessStatusList gets the status of an asynchronous process by entity id and event type for a retailer
+
+  Retrieve a list of process statuses, which shows information regarding previously executed PUT/POST/DELETE requests in descending order. You need to supply an entity id and event type.
+*/
+func (a *Client) GetProcessStatusList(params *GetProcessStatusListParams) (*GetProcessStatusListOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewGetProcessStatusListParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "get-process-status-list",
+		Method:             "GET",
+		PathPattern:        "/retailer/process-status",
+		ProducesMediaTypes: []string{"application/vnd.retailer.v3+json", "application/vnd.retailer.v3+xml"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"https"},
+		Params:             params,
+		Reader:             &GetProcessStatusListReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	success, ok := result.(*GetProcessStatusListOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for get-process-status-list: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

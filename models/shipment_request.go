@@ -9,6 +9,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // ShipmentRequest shipment request
@@ -17,7 +18,9 @@ import (
 type ShipmentRequest struct {
 
 	// Used for administration purposes.
-	ShipmentReference string `json:"shipmentReference,omitempty"`
+	// Max Length: 90
+	// Min Length: 0
+	ShipmentReference *string `json:"shipmentReference,omitempty"`
 
 	// Specifies shipping label to be used for this shipment. Can be retrieved through the shipping label endpoint.
 	ShippingLabelCode string `json:"shippingLabelCode,omitempty"`
@@ -30,6 +33,10 @@ type ShipmentRequest struct {
 func (m *ShipmentRequest) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateShipmentReference(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateTransport(formats); err != nil {
 		res = append(res, err)
 	}
@@ -37,6 +44,23 @@ func (m *ShipmentRequest) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *ShipmentRequest) validateShipmentReference(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.ShipmentReference) { // not required
+		return nil
+	}
+
+	if err := validate.MinLength("shipmentReference", "body", string(*m.ShipmentReference), 0); err != nil {
+		return err
+	}
+
+	if err := validate.MaxLength("shipmentReference", "body", string(*m.ShipmentReference), 90); err != nil {
+		return err
+	}
+
 	return nil
 }
 
