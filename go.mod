@@ -8,5 +8,6 @@ require (
 	github.com/go-openapi/strfmt v0.19.5
 	github.com/go-openapi/swag v0.19.8
 	github.com/go-openapi/validate v0.19.7
+	github.com/matryer/is v1.3.0
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 )
