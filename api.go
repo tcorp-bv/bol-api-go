@@ -10,6 +10,7 @@ import (
 	"github.com/tcorp-bv/bol-api-go/backoff"
 	"github.com/tcorp-bv/bol-api-go/client"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -17,7 +18,7 @@ const (
 	defaultHost  = "api.bol.com"
 	startBackoff = 1 * time.Second
 	maxBackoff   = 20 * time.Second
-	maxTries     = 50
+	maxTries     = 10
 )
 
 var (
@@ -49,12 +50,19 @@ type middleware struct {
 func (m middleware) RoundTrip(req *http.Request) (*http.Response, error) {
 	var tries uint = 0
 	var res *http.Response
+	// Retry logic: Retry up to maxTries, wait exponentially long (using the backoff). If status code is 429, wait according to the Retry-After header instead.
 	for tries <= m.maxTries {
 		res, err := m.transport.RoundTrip(req)
+		t := m.backoff.Get(tries)
 		if err != nil || res == nil || doNotRetryCodes[res.StatusCode] == true {
 			return res, err
 		}
-		t := m.backoff.Get(tries)
+		if res.StatusCode == 429 {
+			retryAfter := getRetryAfter(res.Header.Get("Retry-After"))
+			if retryAfter != 0 {
+				t = time.Duration(retryAfter) * time.Second
+			}
+		}
 		if m.verbose {
 			fmt.Printf("Sleeping %v with code %v\n.", t, res.StatusCode)
 		}
@@ -64,14 +72,25 @@ func (m middleware) RoundTrip(req *http.Request) (*http.Response, error) {
 	return res, nil
 }
 
-// Create a new API client with the host (default is "api.bol.com")
-func NewWithHost(provider auth.CredentialProvider, host string) (BolApi, error) {
-	return newBolAPI(provider, host)
+func getRetryAfter(header string) int {
+	if header == "" {
+		return 0
+	}
+	i, err := strconv.Atoi(header)
+	if err != nil {
+		return 0
+	}
+	return i
 }
 
-func NewWithTransport(provider auth.CredentialProvider, host string, transportProvider func(tripper http.RoundTripper) http.RoundTripper) (BolApi, error) {
+// Create a new API client with the host (default is "api.bol.com")
+func NewWithHost(provider auth.CredentialProvider, host string, basepath string) (BolApi, error) {
+	return newBolAPI(provider, host, basepath, nil)
+}
+
+func NewWithTransport(provider auth.CredentialProvider, host string, basepath string, transportProvider func(tripper http.RoundTripper) http.RoundTripper) (BolApi, error) {
 	// create the original BolAPI
-	bolAPI, err := newBolAPI(provider, host)
+	bolAPI, err := newBolAPI(provider, host, basepath, transportProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +99,7 @@ func NewWithTransport(provider auth.CredentialProvider, host string, transportPr
 	return bolAPI, nil
 }
 
-func newBolAPI(provider auth.CredentialProvider, host string) (*bolAPI, error) {
+func newBolAPI(provider auth.CredentialProvider, host string, basepath string, transportProvider func(tripper http.RoundTripper) http.RoundTripper) (*bolAPI, error) {
 	if host == "" {
 		host = defaultHost
 	}
@@ -95,7 +114,10 @@ func newBolAPI(provider auth.CredentialProvider, host string) (*bolAPI, error) {
 		backoff:   backoff.NewExponentialBackoff(startBackoff, maxBackoff),
 		transport: client.Transport,
 	}
-	transport := httptransport.NewWithClient(host, "", nil, client)
+	if transportProvider != nil {
+		client.Transport = transportProvider(client.Transport)
+	}
+	transport := httptransport.NewWithClient(host, basepath, nil, client)
 	// Map the consumers and producers to json
 	transport.Consumers["application/vnd.retailer.v3+json"] = runtime.JSONConsumer()
 	transport.Consumers["application/problem+json"] = runtime.JSONConsumer()
@@ -104,5 +126,5 @@ func newBolAPI(provider auth.CredentialProvider, host string) (*bolAPI, error) {
 }
 
 func New(provider auth.CredentialProvider) (BolApi, error) {
-	return NewWithHost(provider, defaultHost)
+	return NewWithHost(provider, defaultHost, "")
 }
