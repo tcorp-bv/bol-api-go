@@ -46,7 +46,7 @@ type middleware struct {
 	verbose   bool
 }
 
-// Middleware to add retrying an
+// Middleware to add retrying, TODO: Perhaps don't retry on any error but 429?
 func (m middleware) RoundTrip(req *http.Request) (*http.Response, error) {
 	var tries uint = 0
 	var res *http.Response
