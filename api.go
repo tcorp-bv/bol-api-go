@@ -24,13 +24,13 @@ type BolApi interface {
 	GetClient() *client.V3
 }
 
-type bolApi struct {
+type bolAPI struct {
 	authenticator auth.Authenticator
-	transport     *httptransport.Runtime
+	Transport     *httptransport.Runtime
 }
 
-func (api *bolApi) GetClient() *client.V3 {
-	return client.New(api.transport, strfmt.Default)
+func (api *bolAPI) GetClient() *client.V3 {
+	return client.New(api.Transport, strfmt.Default)
 }
 
 type middleware struct {
@@ -56,10 +56,24 @@ func (m middleware) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // Create a new API client with the host (default is "api.bol.com")
 func NewWithHost(provider auth.CredentialProvider, host string) (BolApi, error) {
+	return newBolAPI(provider, host)
+}
+
+func NewWithTransport(provider auth.CredentialProvider, host string, transportProvider func(tripper http.RoundTripper) http.RoundTripper) (BolApi, error) {
+	// create the original BolAPI
+	bolAPI, err := newBolAPI(provider, host)
+	if err != nil {
+		return nil, err
+	}
+	// wrap the transport
+	bolAPI.Transport.Transport = transportProvider(bolAPI.Transport.Transport)
+	return bolAPI, nil
+}
+
+func newBolAPI(provider auth.CredentialProvider, host string) (*bolAPI, error) {
 	if host == "" {
 		host = defaultHost
 	}
-
 	bolAuth, err := auth.New(provider)
 	if err != nil {
 		return nil, err
@@ -75,7 +89,7 @@ func NewWithHost(provider auth.CredentialProvider, host string) (BolApi, error) 
 		backoff:   backoff.NewExponentialBackoff(startBackoff, maxBackoff),
 		transport: transport.Transport,
 	}
-	return &bolApi{transport: transport}, nil
+	return &bolAPI{Transport: transport}, nil
 }
 
 func New(provider auth.CredentialProvider) (BolApi, error) {
