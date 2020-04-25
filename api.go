@@ -22,7 +22,7 @@ const (
 )
 
 var (
-	doNotRetryCodes = map[int]bool{200: true, 400: true}
+	retryCodes = map[int]bool{429: true}
 )
 
 // The core interface to retrieve the bol.com v3 client
@@ -54,7 +54,7 @@ func (m middleware) RoundTrip(req *http.Request) (*http.Response, error) {
 	for tries <= m.maxTries {
 		res, err := m.transport.RoundTrip(req)
 		t := m.backoff.Get(tries)
-		if err != nil || res == nil || doNotRetryCodes[res.StatusCode] == true {
+		if err != nil || res == nil || retryCodes[res.StatusCode] == false {
 			return res, err
 		}
 		if res.StatusCode == 429 {
