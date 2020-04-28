@@ -2,15 +2,14 @@ package bolapi
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 	"github.com/tcorp-bv/bol-api-go/auth"
-	"github.com/tcorp-bv/bol-api-go/backoff"
 	"github.com/tcorp-bv/bol-api-go/client"
+	"github.com/tcorp-bv/bol-api-go/http/backoff"
+	"github.com/tcorp-bv/bol-api-go/http/middleware"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -22,11 +21,21 @@ const (
 )
 
 var (
-	retryCodes = map[int]bool{429: true}
+	// Constant with error codes for which API requests should be retried.
+	//Note that 429 will be retried after the period indicated in the header, the rest will retry according to the backoff.
+	retryCodes = map[int]bool{
+		429: true, // rate limit reached
+		500: true, // internal server error
+		504: true, // gateway timeout error
+		408: true, // request timeout error
+	}
 )
 
-// The core interface to retrieve the bol.com v3 client
+// The core interface to retrieve the bol.com v3 client.
+// The client contains middleware to retry on rate limits and backoff on server timeouts.
+// Requests can thus sometimes take multiple minutes to complete.
 type BolApi interface {
+	// Get the bol.com http API client.
 	GetClient() *client.V3
 }
 
@@ -37,50 +46,6 @@ type bolAPI struct {
 
 func (api *bolAPI) GetClient() *client.V3 {
 	return client.New(api.Transport, strfmt.Default)
-}
-
-type middleware struct {
-	maxTries  uint
-	backoff   backoff.Backoff
-	transport http.RoundTripper
-	verbose   bool
-}
-
-// Middleware to add retrying, TODO: Perhaps don't retry on any error but 429?
-func (m middleware) RoundTrip(req *http.Request) (*http.Response, error) {
-	var tries uint = 0
-	var res *http.Response
-	// Retry logic: Retry up to maxTries, wait exponentially long (using the backoff). If status code is 429, wait according to the Retry-After header instead.
-	for tries <= m.maxTries {
-		res, err := m.transport.RoundTrip(req)
-		t := m.backoff.Get(tries)
-		if err != nil || res == nil || retryCodes[res.StatusCode] == false {
-			return res, err
-		}
-		if res.StatusCode == 429 {
-			retryAfter := getRetryAfter(res.Header.Get("Retry-After"))
-			if retryAfter != 0 {
-				t = time.Duration(retryAfter) * time.Second
-			}
-		}
-		if m.verbose {
-			fmt.Printf("Sleeping %v with code %v\n.", t, res.StatusCode)
-		}
-		time.Sleep(t)
-		tries++
-	}
-	return res, nil
-}
-
-func getRetryAfter(header string) int {
-	if header == "" {
-		return 0
-	}
-	i, err := strconv.Atoi(header)
-	if err != nil {
-		return 0
-	}
-	return i
 }
 
 // Create a new API client with the host (default is "api.bol.com")
@@ -107,16 +72,19 @@ func newBolAPI(provider auth.CredentialProvider, host string, basepath string, t
 	if err != nil {
 		return nil, err
 	}
-	// Set up he transport to use the client with oauth
+	// Gets an http client with the oauth automatically added as middleware
 	client := bolAuth.Client(context.Background())
-	client.Transport = middleware{
-		maxTries:  maxTries,
-		backoff:   backoff.NewExponentialBackoff(startBackoff, maxBackoff),
-		transport: client.Transport,
+	// Add the retrying middleware
+	client.Transport = middleware.Middleware{
+		MaxTries:  maxTries,
+		Backoff:   backoff.NewExponentialBackoff(startBackoff, maxBackoff),
+		Transport: client.Transport,
 	}
+	// Add the client middleware
 	if transportProvider != nil {
 		client.Transport = transportProvider(client.Transport)
 	}
+	// Sets up the runtime
 	transport := httptransport.NewWithClient(host, basepath, nil, client)
 	// Map the consumers and producers to json
 	transport.Consumers["application/vnd.retailer.v3+json"] = runtime.JSONConsumer()

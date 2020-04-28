@@ -4,7 +4,7 @@ Generated golang API for [bol.com v3](https://api.bol.com/retailer/public/redoc/
 We do not hold copyright over the API specification and [types.json](types.json) is from [bol.com](https://api.bol.com/retailer/public/apispec/v3).
 
 ## Using the API
-Add `github.com/tcorp-bv/bol-api-go v1.0.0` to go.mod.
+Add `github.com/tcorp-bv/bol-api-go v1.6.0` to go.mod.
 
 ```go
 import (
@@ -37,12 +37,12 @@ swagger generate client -f types.json
 
 In the current version we had to change `get-process-status` to `get-process-status-list` due to the duplicate.
 
-## Todo
-* Rate-limit management
-
-## Security notes
-As this project uses go-swagger, it has external dependencies. In production you should audit go.sum to make sure that these are not malicious.
-
 ## Notes on rate limiting
 Rate limits of the bol.com api are shared between all your clientIds and are extremely low.
 Because of this, we recommend having a single service that consumes your bol.com api and indexes all resources.
+
+This library is opinionated in the way it handles rate limiting.
+Requests that fail due to rate limiting will be tried again a certain amount of time.
+Because of this, requests could take a very long time. 
+
+The default behavior is to retry 10 times.
