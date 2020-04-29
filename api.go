@@ -76,9 +76,10 @@ func newBolAPI(provider auth.CredentialProvider, host string, basepath string, t
 	client := bolAuth.Client(context.Background())
 	// Add the retrying middleware
 	client.Transport = middleware.Middleware{
-		MaxTries:  maxTries,
-		Backoff:   backoff.NewExponentialBackoff(startBackoff, maxBackoff),
-		Transport: client.Transport,
+		MaxTries:   maxTries,
+		Backoff:    backoff.NewExponentialBackoff(startBackoff, maxBackoff),
+		Transport:  client.Transport,
+		RetryCodes: retryCodes,
 	}
 	// Add the client middleware
 	if transportProvider != nil {
